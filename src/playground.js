@@ -6,7 +6,7 @@ class Playground {
         this.width = this.squareSize * this.board.numberOfHorizontalSquares;
         this.height = this.squareSize * this.board.numberOfVerticalSquares;
     }
-    displayBoard() {
+    displayBoard(hasFullRow) {
         for (let i = 0; i < this.board.board.length; i++) {
             for (let j = 0; j < this.board.board[i].length; j++) {
                 let square = this.board.board[i][j];
@@ -15,9 +15,24 @@ class Playground {
             }
         }
     }
+    emptyBoard() {
+        for (let i = 0; i < this.board.board.length; i++) {
+            for (let j = 0; j < this.board.board[i].length; j++) {
+                let square = this.board.board[i][j];
+                this.ctx.fillStyle = "black";
+                this.ctx.fillRect(square.position.x * this.squareSize, square.position.y * this.squareSize, this.squareSize - 1, this.squareSize - 1);
+            }
+        }
+    }
+    //for debugging
+    printRow(row) {
+        for (let square of row) {
+            console.log(square);
+        }
+    }
     init() {
         this.board.emptyBoard();
-        this.displayBoard();
+        this.displayBoard(false);
         document.addEventListener("keydown", e => {
             switch (e.key) {
                 case "ArrowLeft":
@@ -57,10 +72,10 @@ class Playground {
         let time = 0;
         const interval = setInterval(() => {
             time++;
-            let gameIsFinished = this.board.update(time);
+            let { gameIsFinished, hasFullRow } = this.board.update(time);
             if (gameIsFinished)
                 clearInterval(interval);
-            this.displayBoard();
+            this.displayBoard(hasFullRow);
         }, 50);
     }
 }

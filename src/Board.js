@@ -27,38 +27,56 @@ class Board {
         this.board = tempBoard;
     }
     updateBoard() {
-        this.heldShapes.forEach((shape, index) => {
-            let squares = shape.getCurrentRotationSquares(index);
-            squares.forEach(square => {
-                try {
-                    this.board[square.position.y][square.position.x] = square;
-                }
-                catch (_a) { }
-            });
-        });
+        const movingShapeSquares = this.heldShapes[this.currentMovingShape].getCurrentRotationSquares(this.currentMovingShape);
+        for (let square of movingShapeSquares) {
+            try {
+                this.board[square.position.y][square.position.x] = square;
+            }
+            catch (_a) { }
+        }
+    }
+    pasteShapeOnBoard(shape, shapeIndex) {
+        for (let square of shape.getCurrentRotationSquares(shapeIndex)) {
+            try {
+                this.board[square.position.y][square.position.x] = square;
+            }
+            catch (_a) { }
+        }
+    }
+    removeMovingShapeFromBoard() {
+        const shape = this.heldShapes[this.currentMovingShape];
+        for (let square of shape.getCurrentRotationSquares(this.currentMovingShape)) {
+            try {
+                this.board[square.position.y][square.position.x] = new Square(new Position(square.position.x, square.position.y), -1, "black");
+            }
+            catch (_a) { }
+            ;
+        }
     }
     //returns true if game is lost
     update(time) {
         //input process
+        let fullRow = false;
+        this.removeMovingShapeFromBoard();
         this.moveHorizontally();
         if (this.shapeCanMoveDown()) {
-            if (time % this.moveDownVelocity == 0) //used to seperate down movement velocity from the playground's refresh rate (to better read input)
+            if (time % this.moveDownVelocity == 0) { //used to seperate down movement velocity from the playground's refresh rate (to better read input)
                 this.heldShapes[this.currentMovingShape].moveDown();
+            }
         }
         else {
             this.heldShapes[this.currentMovingShape].isMoving = false;
+            this.pasteShapeOnBoard(this.heldShapes[this.currentMovingShape], this.currentMovingShape);
             //end game if held shape is stopped at the top
             if (this.heldShapes[this.currentMovingShape].position.y <= 0) {
                 console.log("end");
-                return true;
+                return { gameIsFinished: true, hasFullRow: false };
             }
-            this.checkFullRow();
+            fullRow = this.checkFullRow();
             this.addShape();
         }
-        //board update
-        this.emptyBoard();
         this.updateBoard();
-        return false;
+        return { gameIsFinished: false, hasFullRow: fullRow };
     }
     moveHorizontally() {
         let movingShape = this.heldShapes[this.currentMovingShape];
@@ -152,6 +170,7 @@ class Board {
     }
     rotateCurrentMovingShape() {
         //check if shape is colliding to the right
+        this.removeMovingShapeFromBoard();
         this.heldShapes[this.currentMovingShape].rotate();
         let currentMovingShape = this.heldShapes[this.currentMovingShape];
         let movingShapeWidth = currentMovingShape.rotations[currentMovingShape.currentRotation].rotation[0].length;
@@ -163,48 +182,29 @@ class Board {
             currentMovingShape.position.x = 0;
         }
     }
-    //pretty sure there is a better to implement this function but i did this 3 am and was basically auto-piloting sooooo good luck understanding it
+    //pretty sure there is a better to implement this function but i did this at 3 am and was basically auto-piloting sooooo good luck understanding it
     checkFullRow() {
-        let fullRows = [];
-        for (let i = this.board.length - 1; i > -1; i--) { //searching for all full rows
-            //searching for a full row by scanning each row from bottom to top
-            let row = this.board[i];
-            let fullRow = true;
-            for (let j = 0; j < row.length; j++) {
-                if (row[j].parentIndex === -1) {
-                    fullRow = false;
+        let hasFullRow = false; // for debugging
+        for (let i = 0; i < this.board.length; i++) {
+            let isFullRow = true;
+            for (let j = 0; j < this.board[i].length; j++) {
+                if (this.board[i][j].parentIndex === -1) {
+                    isFullRow = false;
                     break;
                 }
             }
-            if (fullRow)
-                fullRows.push(i);
-        }
-        if (fullRows.length > 0) {
-            for (let i of fullRows) {
-                this.heldShapes.forEach((shape, parentIndex) => {
-                    let shapeSquares = shape.getCurrentRotationSquares(parentIndex);
-                    for (let k = 0; k < shapeSquares.length; k++) {
-                        let square = shapeSquares[k];
-                        if (square.position.y == i) { //found a square in the full row
-                            let rotationRowIndex = square.position.y - shape.position.y;
-                            let rotation = shape.rotations[shape.currentRotation].rotation;
-                            rotation.splice(rotationRowIndex, 1); //remove the row in the full Board row
-                            if (rotation.length === 0) { //if shape has no squares in it left remove it
-                                this.heldShapes.splice(parentIndex, 1);
-                                this.currentMovingShape--;
-                            }
-                            break;
-                        }
-                    }
-                });
-                this.moveShapesDown(i);
+            if (isFullRow) {
+                this.moveRowsDown(i);
+                hasFullRow = true;
             }
         }
+        return hasFullRow;
     }
-    moveShapesDown(startRow) {
-        for (let shape of this.heldShapes) {
-            if (shape.position.y < startRow) {
-                shape.position.y++;
+    moveRowsDown(startRow) {
+        for (let i = startRow; i > 0; i--) {
+            for (let j = 0; j < this.board[startRow].length; j++) {
+                this.board[i][j].parentIndex = this.board[i - 1][j].parentIndex;
+                this.board[i][j].color = this.board[i - 1][j].color;
             }
         }
     }
