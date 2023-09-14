@@ -1,5 +1,5 @@
 import Board from "./Board.js";
-import Square from "./shapes/Square.js";
+import Score from "./Score.js";
 
 class Playground{
 
@@ -10,7 +10,7 @@ class Playground{
 
     squareSize: number;
     
-    board: Board
+    board: Board;
 
     constructor(ctx: CanvasRenderingContext2D, squareSize: number, board: Board){
         this.ctx = ctx;
@@ -20,7 +20,7 @@ class Playground{
         this.height = this.squareSize * this.board.numberOfVerticalSquares;
     }
 
-    displayBoard(hasFullRow: boolean){
+    displayBoard(){
         for(let i=0;i<this.board.board.length;i++){
             for(let j=0;j<this.board.board[i].length;j++){
                 let square = this.board.board[i][j];
@@ -40,16 +40,9 @@ class Playground{
         }
     }
 
-    //for debugging
-    printRow(row: Square[]){
-        for(let square of row){
-            console.log(square);
-        }
-    }
-
     init(){
         this.board.emptyBoard();
-        this.displayBoard(false);
+        this.displayBoard();
         document.addEventListener("keydown", e => {
             switch(e.key){
                 case "ArrowLeft":
@@ -90,10 +83,10 @@ class Playground{
         let time = 0;
         const interval = setInterval(() => {
             time++;
-            let {gameIsFinished, hasFullRow} = this.board.update(time);
+            let gameIsFinished = this.board.update(time);
             if(gameIsFinished)
                 clearInterval(interval);
-            this.displayBoard(hasFullRow);
+            this.displayBoard();
         }, 50);
     }
 

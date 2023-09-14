@@ -3,9 +3,9 @@ import Square from "./shapes/Square.js";
 import Position from "./utils/position.js";
 
 import {I, J, L, O, S, T, Z} from "./shapes/index.js";
+import Score from "./Score.js";
 
 class Board{
-
     numberOfHorizontalSquares = 10;
     numberOfVerticalSquares = 21; // only 20 is displayed with the first one hidden to spawn shapes inside (might change later depending on the heighest shape's height)
     numberOfSquares = this.numberOfHorizontalSquares * this.numberOfVerticalSquares;
@@ -17,10 +17,12 @@ class Board{
     moveDownVelocity: number = 10;
 
     board: Array<Array<Square>> = [];
+    scoreHandler: Score;
 
-    constructor(){
+    constructor(scoreHandler: Score){
         this.emptyBoard();
         this.addShape();
+        this.scoreHandler = scoreHandler;
     }
 
     //fill the board with black squares
@@ -66,9 +68,8 @@ class Board{
 
     //returns true if game is lost
     update(time: number){
-        //input process
-        let fullRow = false;
         this.removeMovingShapeFromBoard();
+        //input process
         this.moveHorizontally();
         if(this.shapeCanMoveDown()){
             if(time % this.moveDownVelocity == 0){//used to seperate down movement velocity from the playground's refresh rate (to better read input)
@@ -80,13 +81,16 @@ class Board{
             //end game if held shape is stopped at the top
             if(this.heldShapes[this.currentMovingShape].position.y <= 0){
                 console.log("end");
-                return {gameIsFinished: true, hasFullRow: false};
+                return true;
             }
-            fullRow = this.checkFullRow();
+            const fullRowCount = this.checkFullRow();
+            if(fullRowCount){
+                this.scoreHandler.addScore(fullRowCount);
+            }
             this.addShape();
         }
         this.updateBoard();
-        return {gameIsFinished: false, hasFullRow: fullRow};
+        return false;
     }
 
     private moveHorizontally(){
@@ -198,7 +202,7 @@ class Board{
 
     //pretty sure there is a better to implement this function but i did this at 3 am and was basically auto-piloting sooooo good luck understanding it
     private checkFullRow(){
-        let hasFullRow = false;// for debugging
+        let linesCount = 0;
         for(let i=0;i<this.board.length;i++){
             let isFullRow = true;
             for(let j=0;j<this.board[i].length;j++){
@@ -208,11 +212,11 @@ class Board{
                 }
             }
             if(isFullRow){
+                linesCount++;
                 this.moveRowsDown(i);
-                hasFullRow = true;
             }
         }
-        return hasFullRow;
+        return linesCount;
     }
 
     private moveRowsDown(startRow: number){
